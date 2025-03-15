@@ -385,6 +385,7 @@ interface PublicSettings {
   "humanization-strategy": "simple" | "none";
   "hide-embed-branding?": boolean;
   "is-hosted?": boolean;
+  "landing-page": string | null;
   "ldap-configured?": boolean;
   "ldap-enabled": boolean;
   "ldap-port": number;
