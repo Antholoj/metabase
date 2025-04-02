@@ -5,6 +5,7 @@ import { SettingHeader } from "metabase/admin/settings/components/SettingHeader"
 import { useAdminSetting } from "metabase/api/utils";
 import type { GenericErrorResponse } from "metabase/lib/errors";
 import { TextInput } from "metabase/ui";
+import { useEnterpriseAdminSetting } from "metabase-enterprise/api/utils/settings";
 
 import { getRelativeLandingPageUrl } from "./utils";
 
