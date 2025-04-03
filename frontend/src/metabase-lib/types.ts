@@ -292,7 +292,6 @@ export type ExpressionOperator =
   | "not";
 
 export type ExpressionArg =
-  | null
   | boolean
   | number
   | bigint
