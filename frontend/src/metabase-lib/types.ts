@@ -286,7 +286,10 @@ export type ExpressionOperator =
   | "datetime-add"
   | "inside"
   | "segment"
-  | "offset";
+  | "offset"
+  | "and"
+  | "or"
+  | "not";
 
 export type ExpressionArg =
   | null
