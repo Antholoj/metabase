@@ -270,6 +270,8 @@ export type ExpressionOperator =
   | ">="
   | "<="
   | "between"
+  | "case"
+  | "if"
   | "contains"
   | "does-not-contain"
   | "is-null"
@@ -291,7 +293,8 @@ export type ExpressionOperator =
   | "offset"
   | "and"
   | "or"
-  | "not";
+  | "not"
+  | "coalesce";
 
 export type ExpressionArg =
   | boolean
