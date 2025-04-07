@@ -21,6 +21,7 @@ import {
   formatSegmentName,
 } from "../identifier";
 import { formatStringLiteral } from "../string";
+import type { OPERATOR } from "../tokenizer";
 
 import { pathMatchers as check } from "./utils";
 
@@ -306,8 +307,8 @@ function formatExpressionOptions(options: Lib.ExpressionOptions): Doc | null {
   return null;
 }
 
-function isOperator(operator: string): boolean {
-  return OPERATORS.has(operator);
+function isOperator(operator: string): operator is OPERATOR {
+  return OPERATORS.has(operator as OPERATOR);
 }
 
 function formatOperator(path: AstPath<Lib.ExpressionParts>, print: Print): Doc {
