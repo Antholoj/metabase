@@ -14,7 +14,9 @@ const setup = ({ databases, schemas }: SetupOpts) => {
   const metadata = createMockMetadata({ databases, schemas });
 
   return {
-    databases: databases.map(({ id }) => checkNotNull(metadata.database(id))),
+    databases: databases.map(({ id }) =>
+      checkNotNull(metadata.database(id)),
+    ) as Database[],
     schemas: schemas.map(({ id }) => checkNotNull(metadata.schema(id))),
   };
 };
