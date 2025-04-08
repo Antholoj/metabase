@@ -334,7 +334,7 @@ export const FieldValuesWidgetInner = forwardRef<
   const search = useRef(
     _.debounce(async (value: string) => {
       if (!value) {
-        setLoadingState("LOADED");
+        setLoadingState("INIT");
         return;
       }
 
@@ -349,7 +349,6 @@ export const FieldValuesWidgetInner = forwardRef<
       _cancel.current();
     }
 
-    setLoadingState("LOADING");
     search.current(value);
   };
 

@@ -1,6 +1,7 @@
 .field {
   font-size: var(--mantine-font-size-md);
   height: 1.5rem;
+  max-width: 100%;
 
   &::placeholder {
     color: var(--mb-color-text-tertiary);
