@@ -1,6 +1,7 @@
 (ns metabase-enterprise.metabot-v3.tools.create-dashboard-subscription
   (:require
    [metabase.api.common :as api]
+   [metabase.api.common.validation :as validation]
    ^{:clj-kondo/ignore [:deprecated-namespace]}
    [metabase.pulse.core :as pulse]
    [metabase.util :as u]
@@ -9,14 +10,17 @@
 (defn create-dashboard-subscription
   "Create a dashboard subscription."
   [{:keys [dashboard-id email schedule]}]
+  (validation/check-has-application-permission :subscription false)
   (if (int? dashboard-id)
-    (let [dashboard (-> (t2/select-one :model/Dashboard :id dashboard-id)
+    (let [_ (api/read-check :model/Dashboard dashboard-id)
+          dashboard (-> (t2/select-one :model/Dashboard :id dashboard-id)
                         (t2/hydrate [:dashcards :card]))
           cards (for [{:keys [id card]} (:dashcards dashboard)
                       :when (-> card :id int?)]
                   (-> card
                       (select-keys [:id :name :collection_id :description :display :parameter_mappings])
                       (assoc :dashboard_card_id id :dashboard_id dashboard-id)))
+          _ (run! #(api/read-check :model/Card (:id %)) cards)
           recipient-id (t2/select-one-fn :id :model/User :email email)
           recipient {:id recipient-id}
           {:keys [frequency hour day-of-week day-of-month]} schedule

@@ -1,8 +1,6 @@
 (ns metabase-enterprise.metabot-v3.dummy-tools
   (:require
    [medley.core :as m]
-   [metabase-enterprise.metabot-v3.tools.create-dashboard-subscription]
-   [metabase-enterprise.metabot-v3.tools.filters]
    [metabase-enterprise.metabot-v3.tools.util :as metabot-v3.tools.u]
    [metabase.api.common :as api]
    [metabase.legacy-mbql.normalize :as mbql.normalize]
@@ -30,6 +28,7 @@
 (defn get-dashboard-details
   "Get information about the dashboard with ID `dashboard-id`."
   [{:keys [dashboard-id]}]
+  (api/read-check :model/Dashboard dashboard-id)
   (if-let [dashboard (t2/select-one [:model/Dashboard :id :description :name] dashboard-id)]
     {:structured-output (assoc dashboard :type :dashboard)}
     {:output "dashboard not found"}))
@@ -224,7 +223,9 @@
   [query-id legacy-query]
   (let [legacy-query (mbql.normalize/normalize legacy-query)
         field-id-prefix (metabot-v3.tools.u/query-field-id-prefix query-id)
-        mp (lib.metadata.jvm/application-database-metadata-provider (:database legacy-query))
+        database-id (:database legacy-query)
+        _ (api/read-check :model/Database database-id)
+        mp (lib.metadata.jvm/application-database-metadata-provider database-id)
         query (lib/query mp legacy-query)
         returned-cols (lib/returned-columns query)]
     {:type :query
