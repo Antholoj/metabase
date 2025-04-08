@@ -9,7 +9,6 @@ import ErrorBoundary from "metabase/ErrorBoundary";
 import { ListField } from "metabase/components/ListField";
 import LoadingSpinner from "metabase/components/LoadingSpinner";
 import SingleSelectListField from "metabase/components/SingleSelectListField";
-import TokenField, { parseStringValue } from "metabase/components/TokenField";
 import type { LayoutRendererArgs } from "metabase/components/TokenField/TokenField";
 import ValueComponent from "metabase/components/Value";
 import CS from "metabase/css/core/index.css";
@@ -24,6 +23,7 @@ import {
   fetchParameterValues,
 } from "metabase/parameters/actions";
 import { addRemappings } from "metabase/redux/metadata";
+import { MultiAutocomplete } from "metabase/ui";
 import type Question from "metabase-lib/v1/Question";
 import type Field from "metabase-lib/v1/metadata/Field";
 import type {
@@ -43,6 +43,7 @@ import {
   canUseDashboardEndpoints,
   canUseParameterEndpoints,
   dedupeValues,
+  getLabel,
   getNonVirtualFields,
   getTokenFieldPlaceholder,
   getValue,
@@ -96,11 +97,9 @@ export interface IFieldValuesWidgetProps {
   multi?: boolean;
   autoFocus?: boolean;
   className?: string;
-  prefix?: string;
   placeholder?: string;
   checkedColor?: string;
 
-  valueRenderer?: (value: string | number) => JSX.Element;
   optionRenderer?: (option: FieldValue) => JSX.Element;
   layoutRenderer?: (props: LayoutRendererArgs) => JSX.Element;
 }
@@ -110,10 +109,8 @@ export const FieldValuesWidgetInner = forwardRef<
   IFieldValuesWidgetProps
 >(function FieldValuesWidgetInner(
   {
-    color,
     maxResults = MAX_SEARCH_RESULTS,
     alwaysShowOptions = true,
-    style = {},
     formatOptions = {},
     containerWidth,
     maxWidth = 500,
@@ -133,10 +130,8 @@ export const FieldValuesWidgetInner = forwardRef<
     multi,
     autoFocus,
     className,
-    prefix,
     placeholder,
     checkedColor,
-    valueRenderer,
     optionRenderer,
     layoutRenderer,
   },
@@ -365,20 +360,6 @@ export const FieldValuesWidgetInner = forwardRef<
     search.current(value);
   };
 
-  if (!valueRenderer) {
-    valueRenderer = (value: string | number) => {
-      const option = options.find((option) => getValue(option) === value);
-      return renderValue({
-        fields,
-        formatOptions,
-        value,
-        autoLoad: true,
-        compact: false,
-        displayValue: option?.[1],
-      });
-    };
-  }
-
   if (!optionRenderer) {
     optionRenderer = (option: FieldValue) =>
       renderValue({
@@ -441,14 +422,7 @@ export const FieldValuesWidgetInner = forwardRef<
     disableSearch,
     options,
   });
-
-  const parseFreeformValue = (value: string | undefined) => {
-    if (isNumeric(fields[0], parameter)) {
-      const number = typeof value === "string" ? parseNumber(value) : null;
-      return typeof number === "bigint" ? String(number) : number;
-    }
-    return parseStringValue(value);
-  };
+  const isNumericParameter = isNumeric(fields[0], parameter);
 
   return (
     <ErrorBoundary ref={ref}>
@@ -484,38 +458,41 @@ export const FieldValuesWidgetInner = forwardRef<
             checkedColor={checkedColor}
           />
         ) : (
-          <TokenField
-            prefix={prefix}
-            value={value.filter((v) => v != null)}
-            onChange={onChange}
-            placeholder={tokenFieldPlaceholder}
-            updateOnInputChange
-            // forwarded props
-            multi={multi}
-            autoFocus={autoFocus}
-            color={color}
-            style={{ ...style, minWidth: "inherit" }}
+          <MultiAutocomplete
             className={className}
-            optionsStyle={
-              !parameter && !showOptionsInPopover ? { maxHeight: "none" } : {}
-            }
-            // end forwarded props
-            options={options}
-            valueKey="0"
-            valueRenderer={valueRenderer}
-            optionRenderer={optionRenderer}
-            layoutRenderer={layoutRenderer}
-            filterOption={(option, filterString) => {
-              const lowerCaseFilterString = filterString.toLowerCase();
-              return option?.some?.(
-                (value) =>
-                  value != null &&
-                  String(value).toLowerCase().includes(lowerCaseFilterString),
-              );
+            values={value
+              .filter((value) => value != null)
+              .map((value) => String(value))}
+            options={options
+              .filter((option) => getValue(option) != null)
+              .map((option) => ({
+                value: String(getValue(option)),
+                label: String(getLabel(option) ?? getValue(option)),
+              }))}
+            placeholder={tokenFieldPlaceholder}
+            autoFocus={autoFocus}
+            onCreate={(value) => {
+              if (isNumericParameter) {
+                const number = parseNumber(value);
+                return number != null ? String(number) : null;
+              } else {
+                const string = value.trim();
+                return string.length > 0 ? string : null;
+              }
             }}
-            onInputChange={onInputChange}
-            parseFreeformValue={parseFreeformValue}
-            updateOnInputBlur
+            onChange={(values) => {
+              if (isNumericParameter) {
+                onChange(
+                  values.map((value) => {
+                    const number = parseNumber(value);
+                    return typeof number === "bigint" ? String(number) : number;
+                  }),
+                );
+              } else {
+                onChange(values);
+              }
+            }}
+            onSearchChange={onInputChange}
           />
         )}
       </div>

@@ -32,13 +32,11 @@ import {
 
 async function setup({
   fields,
-  prefix,
   searchValue,
   ...props
 }: {
   fields: (Field | null | undefined)[];
   searchValue?: string;
-  prefix?: string;
 } & Omit<Partial<IFieldValuesWidgetProps>, "fields">) {
   const fetchFieldValues = jest.fn(({ id }) => ({
     payload: fields.filter(checkNotNull).find((f) => f?.id === id),
@@ -61,7 +59,6 @@ async function setup({
       value={[]}
       fields={fields.filter(isNotNull)}
       onChange={jest.fn()}
-      prefix={prefix}
       {...props}
     />,
     {
@@ -229,21 +226,6 @@ describe("FieldValuesWidget", () => {
       ).toBeInTheDocument();
       expect(screen.queryByText("AZ")).not.toBeInTheDocument();
       expect(screen.queryByText("Facebook")).not.toBeInTheDocument();
-    });
-  });
-
-  describe("prefix", () => {
-    it("should render a passed prefix", async () => {
-      await setup({
-        fields: [metadata.field(PRODUCTS.PRICE)],
-        prefix: "$$$",
-      });
-      expect(screen.getByTestId("input-prefix")).toHaveTextContent("$$$");
-    });
-
-    it("should not render a prefix if omitted", async () => {
-      await setup({ fields: [metadata.field(PRODUCTS.PRICE)] });
-      expect(screen.queryByTestId("input-prefix")).not.toBeInTheDocument();
     });
   });
 
