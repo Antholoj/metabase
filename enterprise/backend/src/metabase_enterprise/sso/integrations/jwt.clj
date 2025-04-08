@@ -122,19 +122,6 @@
                :status-code 402})))
   true)
 
-(defn ^:private generate-response-token
-  [session jwt-data]
-  (if-not (embed.settings/enable-embedding-sdk)
-    (throw
-     (ex-info (tru "SDK Embedding is disabled. Enable it in the Embedding settings.")
-              {:status      "error-embedding-sdk-disabled"
-               :status-code 402}))
-    (response/response
-     {:status :ok
-      :id     (:key session)
-      :exp    (:exp jwt-data)
-      :iat    (:iat jwt-data)})))
-
 (defn ^:private redirect-to-idp
   [idp redirect]
   (let [return-to-param (if (str/includes? idp "?") "&return_to=" "?return_to=")]
@@ -143,18 +130,13 @@
           (when redirect
             (str return-to-param redirect))))))
 
-(defn ^:private handle-jwt-authentication
-  [{:keys [session redirect-url jwt-data]} token request]
-  (if token
-    (generate-response-token session jwt-data)
-    (request/set-session-cookies request (response/redirect redirect-url) session (t/zoned-date-time (t/zone-id "GMT")))))
-
 (defmethod sso.i/sso-get :jwt
   [{{:keys [jwt redirect token] :or {token nil}} :params, :as request}]
   (premium-features/assert-has-feature :sso-jwt (tru "JWT-based authentication"))
   (check-jwt-enabled)
   (if jwt
-    (handle-jwt-authentication (session-data jwt request) token request)
+    (let [session (session-data jwt request)]
+      (handle-token-response (:session session-data) (:iat session-data) (:exp session-data) token request (response/redirect redirect-url)))
     (redirect-to-idp (sso-settings/jwt-identity-provider-uri) redirect)))
 
 (defmethod sso.i/sso-post :jwt

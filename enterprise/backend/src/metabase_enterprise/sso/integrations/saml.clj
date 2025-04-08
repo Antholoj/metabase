@@ -222,7 +222,7 @@
                             :user-attributes attrs
                             :device-info     (request/device-info request)})
             response      (response/redirect (or continue-url (public-settings/site-url)))]
-        (request/set-session-cookies request response session (t/zoned-date-time (t/zone-id "GMT"))))
+        (handle-session-response session (or continue-url (public-settings/site-url)) iat exp (:token params) request response))
       (catch Throwable e
         (log/error e "SAML response validation failed")
         (throw (ex-info (tru "Unable to log in: SAML response validation failed")

@@ -106,7 +106,7 @@
   (try
     (let [redirect (some-> redirect-url (URI.))
           our-host (some-> (public-settings/site-url) (URI.) (.getHost))]
-      (api/check-400 (or (nil? redirect-url)
+      (api/check-400 (or (nil? redirect-ur)
                          (relative-uri? redirect)
                          (= (.getHost redirect) our-host))))
     (catch Exception e
@@ -114,3 +114,23 @@
       (throw (ex-info (tru "Invalid redirect URL")
                       {:status-code  400
                        :redirect-url redirect-url})))))
+
+(defn handle-session-response
+  [session redirect-url iat exp token request response]
+  (if token
+    (generate-response-token session exp iat)
+    (request/set-session-cookies request response session (t/zoned-date-time (t/zone-id "GMT")))))
+
+(defn  generate-response-token
+  [session exp iat]
+  (if-not (embed.settings/enable-embedding-sdk)
+    (throw
+     (ex-info (tru "SDK Embedding is disabled. Enable it in the Embedding settings.")
+              {:status      "error-embedding-sdk-disabled"
+               :status-code 402}))
+    (response/response
+     {:status :ok
+      :id     (:key session)
+      :exp    (:exp jwt-data)
+      :iat    (:iat jwt-data)})))
+
