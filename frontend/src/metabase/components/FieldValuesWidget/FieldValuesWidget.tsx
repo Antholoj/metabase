@@ -2,14 +2,13 @@ import cx from "classnames";
 import type { StyleHTMLAttributes } from "react";
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { useMount, usePrevious, useUnmount } from "react-use";
-import { jt, t } from "ttag";
+import { t } from "ttag";
 import _ from "underscore";
 
 import ErrorBoundary from "metabase/ErrorBoundary";
 import { ListField } from "metabase/components/ListField";
 import LoadingSpinner from "metabase/components/LoadingSpinner";
 import SingleSelectListField from "metabase/components/SingleSelectListField";
-import type { LayoutRendererArgs } from "metabase/components/TokenField/TokenField";
 import ValueComponent from "metabase/components/Value";
 import CS from "metabase/css/core/index.css";
 import Fields from "metabase/entities/fields";
@@ -23,7 +22,7 @@ import {
   fetchParameterValues,
 } from "metabase/parameters/actions";
 import { addRemappings } from "metabase/redux/metadata";
-import { MultiAutocomplete } from "metabase/ui";
+import { Loader, MultiAutocomplete } from "metabase/ui";
 import type Question from "metabase-lib/v1/Question";
 import type Field from "metabase-lib/v1/metadata/Field";
 import type {
@@ -36,7 +35,6 @@ import type { State } from "metabase-types/store";
 
 import ExplicitSize from "../ExplicitSize";
 
-import { OptionsMessage, StyledEllipsified } from "./FieldValuesWidget.styled";
 import type { LoadingStateType, ValuesMode } from "./types";
 import {
   canUseCardEndpoints,
@@ -51,7 +49,6 @@ import {
   hasList,
   isExtensionOfPreviousSearch,
   isNumeric,
-  isSearchable,
   searchFieldValues,
   shouldList,
   showRemapping,
@@ -101,7 +98,6 @@ export interface IFieldValuesWidgetProps {
   checkedColor?: string;
 
   optionRenderer?: (option: FieldValue) => JSX.Element;
-  layoutRenderer?: (props: LayoutRendererArgs) => JSX.Element;
 }
 
 export const FieldValuesWidgetInner = forwardRef<
@@ -110,7 +106,6 @@ export const FieldValuesWidgetInner = forwardRef<
 >(function FieldValuesWidgetInner(
   {
     maxResults = MAX_SEARCH_RESULTS,
-    alwaysShowOptions = true,
     formatOptions = {},
     containerWidth,
     maxWidth = 500,
@@ -119,7 +114,6 @@ export const FieldValuesWidgetInner = forwardRef<
     disableList = false,
     disableSearch = false,
     disablePKRemappingForSearch,
-    showOptionsInPopover = false,
     parameter,
     parameters,
     fields,
@@ -133,7 +127,6 @@ export const FieldValuesWidgetInner = forwardRef<
     placeholder,
     checkedColor,
     optionRenderer,
-    layoutRenderer,
   },
   ref,
 ) {
@@ -371,36 +364,6 @@ export const FieldValuesWidgetInner = forwardRef<
       });
   }
 
-  if (!layoutRenderer) {
-    layoutRenderer = showOptionsInPopover
-      ? undefined
-      : ({
-          optionsList,
-          isFocused,
-          isAllSelected,
-          isFiltered,
-          valuesList,
-        }: LayoutRendererArgs) => (
-          <div>
-            {valuesList}
-            {renderOptions({
-              alwaysShowOptions,
-              parameter,
-              fields,
-              disableSearch,
-              disablePKRemappingForSearch,
-              loadingState,
-              options,
-              valuesMode,
-              optionsList,
-              isFocused,
-              isAllSelected,
-              isFiltered,
-            })}
-          </div>
-        );
-  }
-
   const tokenFieldPlaceholder = getTokenFieldPlaceholder({
     fields,
     parameter,
@@ -416,6 +379,7 @@ export const FieldValuesWidgetInner = forwardRef<
     shouldList({ parameter, fields, disableSearch }) &&
     valuesMode === "list";
   const isLoading = loadingState === "LOADING";
+  const isLoaded = loadingState === "LOADED";
   const hasListValues = hasList({
     parameter,
     fields,
@@ -470,6 +434,10 @@ export const FieldValuesWidgetInner = forwardRef<
                 label: String(getLabel(option) ?? getValue(option)),
               }))}
             placeholder={tokenFieldPlaceholder}
+            rightSection={isLoading ? <Loader size="xs" /> : undefined}
+            nothingFoundMessage={
+              isLoaded ? getNothingFoundMessage(fields) : undefined
+            }
             autoFocus={autoFocus}
             onCreate={(value) => {
               if (isNumericParameter) {
@@ -518,93 +486,11 @@ const LoadingState = () => (
   </div>
 );
 
-const NoMatchState = ({ fields }: { fields: (Field | null)[] }) => {
-  if (fields.length === 1 && !!fields[0]) {
-    const [{ display_name }] = fields;
-
-    return (
-      <OptionsMessage>
-        {jt`No matching ${(
-          <StyledEllipsified key={display_name}>
-            {display_name}
-          </StyledEllipsified>
-        )} found.`}
-      </OptionsMessage>
-    );
-  }
-
-  return <OptionsMessage>{t`No matching result`}</OptionsMessage>;
-};
-
-const EveryOptionState = () => (
-  <OptionsMessage>{t`Including every option in your filter probably won’t do much…`}</OptionsMessage>
-);
-
-interface RenderOptionsProps {
-  alwaysShowOptions: boolean;
-  parameter?: Parameter;
-  fields: Field[];
-  disableSearch: boolean;
-  disablePKRemappingForSearch?: boolean;
-  loadingState: LoadingStateType;
-  options: FieldValue[];
-  valuesMode: ValuesMode;
-  optionsList: React.ReactNode;
-  isFocused: boolean;
-  isAllSelected: boolean;
-  isFiltered: boolean;
-}
-function renderOptions({
-  alwaysShowOptions,
-  parameter,
-  fields,
-  disableSearch,
-  disablePKRemappingForSearch,
-  loadingState,
-  options,
-  valuesMode,
-  optionsList,
-  isFocused,
-  isAllSelected,
-  isFiltered,
-}: RenderOptionsProps) {
-  if (alwaysShowOptions || isFocused) {
-    if (optionsList) {
-      return optionsList;
-    } else if (
-      hasList({
-        parameter,
-        fields,
-        disableSearch,
-        options,
-      }) &&
-      valuesMode === "list"
-    ) {
-      if (isAllSelected) {
-        return <EveryOptionState />;
-      }
-    } else if (
-      isSearchable({
-        parameter,
-        fields,
-        disableSearch,
-        disablePKRemappingForSearch,
-        valuesMode,
-      })
-    ) {
-      if (loadingState === "LOADING") {
-        return <LoadingState />;
-      } else if (loadingState === "LOADED" && isFiltered) {
-        return (
-          <NoMatchState
-            fields={fields.map(
-              (field) =>
-                field.searchField(disablePKRemappingForSearch) as Field | null,
-            )}
-          />
-        );
-      }
-    }
+function getNothingFoundMessage(fields: (Field | null)[]) {
+  if (fields.length === 1 && fields[0] != null) {
+    return t`No matching ${fields[0]?.display_name} found.`;
+  } else {
+    return t`No matching result`;
   }
 }
 
