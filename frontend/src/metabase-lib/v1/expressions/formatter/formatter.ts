@@ -9,9 +9,9 @@ import { isa } from "metabase-lib/v1/types/utils/isa";
 import {
   type EDITOR_QUOTES,
   EXPRESSION_OPERATOR_WITHOUT_ORDER_PRIORITY,
-  MBQL_CLAUSES,
   OPERATORS,
   OPERATOR_PRECEDENCE,
+  getClauseDefinition,
   getExpressionName,
 } from "../config";
 import {
@@ -389,7 +389,7 @@ function isLogicOperator(op: string) {
 }
 
 function isUnaryOperator(op: string) {
-  const clause = MBQL_CLAUSES[op];
+  const clause = getClauseDefinition(op);
   return clause && clause?.args.length === 1;
 }
 
