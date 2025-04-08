@@ -170,7 +170,6 @@ export const FieldValuesWidgetInner = forwardRef<
 
   const fetchValues = async (query?: string) => {
     setLoadingState("LOADING");
-    setOptions([]);
 
     let newOptions: FieldValue[] = [];
     let newValuesMode = valuesMode;
